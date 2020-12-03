@@ -335,7 +335,7 @@ pub struct Schema {
     // composition
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "allOf")]
-    pub all_of: Option<Vec<Box<Schema>>>,
+    pub all_of: Option<Vec<Schema>>,
     // TODO: we need a validation step that we only collect x-* properties here.
     #[serde(flatten)]
     pub other: BTreeMap<String, serde_json::Value>,
@@ -344,8 +344,6 @@ pub struct Schema {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json;
-    use serde_yaml;
     use std::collections::BTreeMap;
 
     #[test]
