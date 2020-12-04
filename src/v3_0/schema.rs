@@ -5,11 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 
 use crate::{
-    v3_0::components::{Components, ObjectOrReference},
+    v3_0::components::{AdditionalProperties, Components, ObjectOrReference},
     Error, Result, MINIMUM_OPENAPI30_VERSION,
 };
-
-use super::AdditionalProperties;
 
 impl Spec {
     pub fn validate_version(&self) -> Result<semver::Version> {
@@ -440,9 +438,12 @@ pub struct Schema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
 
+    /// The value of this keyword MUST be an array.  This array SHOULD have
+    /// at least one element.  Elements in the array SHOULD be unique.
+    /// Elements in the array MAY be of any type, including null.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "enum")]
-    pub enum_values: Option<Vec<String>>,
+    pub enum_values: Option<Vec<serde_json::Value>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub required: Option<Vec<String>>,
@@ -478,7 +479,7 @@ pub struct Schema {
     ///       This suggest using
     ///       [`serde_json::Value`](https://docs.serde.rs/serde_json/value/enum.Value.html). [spec][https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#data-types]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub example: Option<serde_json::value::Value>,
+    pub example: Option<serde_json::Value>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
