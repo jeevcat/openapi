@@ -9,6 +9,8 @@ use crate::{
     Error, Result, MINIMUM_OPENAPI30_VERSION,
 };
 
+use super::AdditionalProperties;
+
 impl Spec {
     pub fn validate_version(&self) -> Result<semver::Version> {
         let spec_version = &self.openapi;
@@ -457,7 +459,6 @@ pub struct Schema {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nullable: Option<bool>,
 
-    // FIXME: Why can this be a "boolean" (as per the spec)? It doesn't make sense. Here it's not.
     /// Value can be boolean or object. Inline or referenced schema MUST be of a
     /// [Schema Object](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#schemaObject)
     /// and not a standard JSON Schema.
@@ -467,7 +468,7 @@ pub struct Schema {
         skip_serializing_if = "Option::is_none",
         rename = "additionalProperties"
     )]
-    pub additional_properties: Option<ObjectOrReference<Box<Schema>>>,
+    pub additional_properties: Option<AdditionalProperties>,
 
     /// A free-form property to include an example of an instance for this schema.
     /// To represent examples that cannot be naturally represented in JSON or YAML,
@@ -1065,7 +1066,7 @@ mod tests {
                 assert!(implicit.scopes.contains_key("write:pets"));
                 assert!(implicit.scopes.contains_key("read:pets"));
             }
-            _ => assert!(false, "wrong security scheme type"),
+            _ => panic!("wrong security scheme type"),
         }
     }
 }

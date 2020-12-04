@@ -402,7 +402,7 @@ mod tests {
                 flow: Flow::Implicit,
                 authorization_url: "foo/bar".into(),
                 token_url: None,
-                scopes: scopes,
+                scopes,
                 description: None,
             }
         );
@@ -419,7 +419,7 @@ mod tests {
                 flow: Flow::Implicit,
                 authorization_url: "foo/bar".into(),
                 token_url: None,
-                scopes: scopes,
+                scopes,
                 description: None,
             })
             .unwrap()
