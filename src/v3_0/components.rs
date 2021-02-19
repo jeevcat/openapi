@@ -1,5 +1,6 @@
 use crate::v3_0::{
-    Callback, Example, Header, Link, Parameter, RequestBody, Response, Schema, SecurityScheme,
+    Callback, Example, Extensions, Header, Link, Parameter, RequestBody, Response, Schema,
+    SecurityScheme,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -16,9 +17,9 @@ pub enum ObjectOrReference<T> {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]
-pub enum AdditionalProperties {
-    Bool(bool),
-    Schema(Box<Schema>),
+pub enum BooleanObjectOrReference<T> {
+    Boolean(bool),
+    Object(T),
     Ref {
         #[serde(rename = "$ref")]
         ref_path: String,
@@ -68,5 +69,7 @@ pub struct Components {
     /// An object to hold reusable Callback Objects.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub callbacks: Option<BTreeMap<String, ObjectOrReference<Callback>>>,
-    // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions}
+
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }

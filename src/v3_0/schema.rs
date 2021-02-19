@@ -1,11 +1,12 @@
 //! Schema specification for [OpenAPI 3.0.0](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md)
 
+use crate::v3_0::extension::Extensions;
 use serde::{Deserialize, Serialize};
-
 use std::collections::{BTreeMap, HashMap};
+use url::Url;
 
 use crate::{
-    v3_0::components::{AdditionalProperties, Components, ObjectOrReference},
+    v3_0::components::{BooleanObjectOrReference, Components, ObjectOrReference},
     Error, Result, MINIMUM_OPENAPI30_VERSION,
 };
 
@@ -77,7 +78,8 @@ pub struct Spec {
     /// Additional external documentation.
     #[serde(skip_serializing_if = "Option::is_none", rename = "externalDocs")]
     pub external_docs: Option<ExternalDoc>,
-    // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions}
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }
 
 /// General information about the API.
@@ -107,16 +109,6 @@ pub struct Info {
     pub license: Option<License>,
 }
 
-/// Wraper around `url::Url` to fix serde issue
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct Url(#[serde(with = "url_serde")] url::Url);
-
-impl Url {
-    pub fn parse<S: AsRef<str>>(input: S) -> std::result::Result<Url, url::ParseError> {
-        url::Url::parse(input.as_ref()).map(Url)
-    }
-}
-
 /// Contact information for the exposed API.
 ///
 /// See <https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#contactObject>.
@@ -131,7 +123,8 @@ pub struct Contact {
     // TODO: Make sure the email is a valid email
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
-    // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }
 
 /// License information for the exposed API.
@@ -144,7 +137,8 @@ pub struct License {
     /// A URL to the license used for the API.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<Url>,
-    // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions}
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }
 
 /// An object representing a Server.
@@ -253,9 +247,9 @@ pub struct PathItem {
     /// [OpenAPI Object's components/parameters](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#componentsParameters).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parameters: Option<Vec<ObjectOrReference<Parameter>>>,
-    // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions}
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }
-
 /// Describes a single API operation on a path.
 ///
 /// See <https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#operationObject>.
@@ -347,6 +341,8 @@ pub struct Operation {
     /// this value.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub servers: Option<Vec<Server>>,
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }
 
 // FIXME: Verify against OpenAPI 3.0
@@ -405,8 +401,13 @@ pub struct Parameter {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 enum ParameterStyle {
+    Matrix,
+    Label,
     Form,
     Simple,
+    SpaceDelimited,
+    PipeDelimited,
+    DeepObject,
 }
 
 // FIXME: Verify against OpenAPI 3.0
@@ -469,7 +470,7 @@ pub struct Schema {
         skip_serializing_if = "Option::is_none",
         rename = "additionalProperties"
     )]
-    pub additional_properties: Option<AdditionalProperties>,
+    pub additional_properties: Option<BooleanObjectOrReference<Box<Schema>>>,
 
     /// A free-form property to include an example of an instance for this schema.
     /// To represent examples that cannot be naturally represented in JSON or YAML,
@@ -486,21 +487,44 @@ pub struct Schema {
 
     // The following properties are taken directly from the JSON Schema definition and
     // follow the same specifications:
-    // multipleOf
-    // maximum
-    // exclusiveMaximum
-    // minimum
-    // exclusiveMinimum
-    // maxLength
-    // minLength
-    // pattern (This string SHOULD be a valid regular expression, according to the ECMA 262 regular expression dialect)
-    // maxItems
-    // minItems
-    // uniqueItems
-    // maxProperties
-    // minProperties
-    // required
-    // enum
+    #[serde(skip_serializing_if = "Option::is_none", rename = "multipleOf")]
+    pub multiple_of: Option<u32>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub maximum: Option<i32>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "exclusiveMaximum")]
+    pub exclusive_maximum: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minimum: Option<i32>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "exclusiveMinimum")]
+    pub exclusive_minimum: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "maxLength")]
+    pub max_length: Option<u32>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "minLength")]
+    pub min_length: Option<u32>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pattern: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "maxItems")]
+    pub max_items: Option<u32>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "minItems")]
+    pub min_items: Option<u32>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "uniqueItems")]
+    pub unique_items: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "maxProperties")]
+    pub max_properties: Option<u32>,
+
+    #[serde(skip_serializing_if = "Option::is_none", rename = "minProperties")]
+    pub min_properties: Option<u32>,
 
     // The following properties are taken from the JSON Schema definition but their
     // definitions were adjusted to the OpenAPI Specification.
@@ -521,9 +545,6 @@ pub struct Schema {
     /// `string`, then `default` can be `"foo"` but cannot be `1`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<serde_json::Value>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub minimum: Option<serde_json::Value>,
 
     /// Inline or referenced schema MUST be of a [Schema Object](#schemaObject) and not a standard
     /// JSON Schema.
@@ -548,12 +569,6 @@ pub struct Schema {
     /// [not](https://swagger.io/docs/specification/data-models/oneof-anyof-allof-not/#not)
     #[serde(rename = "not", skip_serializing_if = "Option::is_none")]
     pub not: Option<Vec<ObjectOrReference<Schema>>>,
-
-    #[serde(rename = "maxLength", skip_serializing_if = "Option::is_none")]
-    pub max_length: Option<u32>,
-
-    #[serde(rename = "minLength", skip_serializing_if = "Option::is_none")]
-    pub min_length: Option<u32>,
 
     /// [Specification extensions](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#specificationExtensions)
     #[serde(flatten)]
@@ -589,7 +604,8 @@ pub struct Response {
     /// [Component Objects](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#componentsObject).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub links: Option<BTreeMap<String, ObjectOrReference<Link>>>,
-    // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions}
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }
 
 /// The Header Object follows the structure of the
@@ -712,7 +728,8 @@ pub enum Link {
         /// A server object to be used by the target operation.
         #[serde(skip_serializing_if = "Option::is_none")]
         server: Option<Server>,
-        // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtension
+        #[serde(flatten)]
+        extensions: Extensions,
     },
     /// The name of an _existing_, resolvable OAS operation, as defined with a unique
     /// `operationId`. This field is mutually exclusive of the `operationRef` field.
@@ -746,7 +763,8 @@ pub enum Link {
         /// A server object to be used by the target operation.
         #[serde(skip_serializing_if = "Option::is_none")]
         server: Option<Server>,
-        // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtension
+        #[serde(flatten)]
+        extensions: Extensions,
     },
 }
 
@@ -859,8 +877,8 @@ pub struct Example {
     // /// and `externalValue` field are mutually exclusive.
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub externalValue: Option<String>,
-
-    // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions}
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }
 
 /// Defines a security scheme that can be used by the operations. Supported schemes are
@@ -997,8 +1015,8 @@ pub struct Tag {
     // /// Additional external documentation for this tag.
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub external_docs: Option<Vec<ExternalDoc>>,
-
-    // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions}
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }
 
 /// Allows referencing an external resource for extended documentation.
@@ -1013,7 +1031,8 @@ pub struct ExternalDoc {
     /// [CommonMark syntax](http://spec.commonmark.org/) MAY be used for rich text representation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    // TODO: Add "Specification Extensions" https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions}
+    #[serde(flatten)]
+    pub extensions: Extensions,
 }
 
 #[cfg(test)]
